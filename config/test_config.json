@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "project": "Power-Supply-Test",
+    "test_name": "DC Power Supply Output Validation",
+    "dut": "PS-3000 Bench Supply",
+    "config_version": "1.2.0",
+    "last_updated": "2026-06-22",
+    "maintainer": "Validation Engineering"
+  },
+  "supply": {
+    "channel": 1,
+    "voltage_setpoint_volts": 12.0,
+    "current_limit_amps": 2.5,
+    "settling_time_seconds": 0.5
+  },
+  "measurement": {
+    "sample_count": 10,
+    "sample_interval_seconds": 0.1,
+    "tolerance_volts": 0.25,
+    "warmup_seconds": 2.0
+  },
+  "limits": {
+    "voltage_min_volts": 11.75,
+    "voltage_max_volts": 12.25,
+    "ripple_max_millivolts": 50.0
+  },
+  "logging": {
+    "results_dir": "results",
+    "log_file": "power_supply_test.log"
+  }
+}

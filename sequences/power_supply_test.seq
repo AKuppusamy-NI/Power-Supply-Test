@@ -1,0 +1,87 @@
+# =============================================================================
+# Sequence:   power_supply_test.seq
+# Purpose:    DC power supply output validation workflow for the PS-3000 bench
+#             supply. Executed by the TestStand sequencer; each step calls a
+#             Python action in ../src and reads parameters from
+#             ../config/test_config.json.
+# Owner:      Validation Engineering
+# Updated:    2026-06-22
+# =============================================================================
+#
+# Parameter naming is kept consistent with config/test_config.json:
+#   voltage_setpoint_volts, tolerance_volts, sample_count, current_limit_amps
+#
+# Sequence "MainSequence" --------------------------------------------------
+
+Sequence: MainSequence
+
+  # Step 1 - Load configuration
+  # Read the shared test configuration so every step uses the same setpoint,
+  # tolerance and sample settings. Aborts the run if the file is missing.
+  Step "Load Configuration"
+    Action      = Python
+    Module      = utils/helpers.py
+    Function    = load_config
+    Argument    = config/test_config.json
+    OnFail      = Terminate
+
+  # Step 2 - Instrument power-on and warm-up
+  # Apply the voltage setpoint and current limit, then allow the supply to
+  # settle for warmup_seconds before any measurement is taken.
+  Step "Power On and Warm Up"
+    Action      = Python
+    Module      = src/measure_voltage.py
+    Function    = power_on
+    Uses        = supply.voltage_setpoint_volts, supply.current_limit_amps
+    Wait        = measurement.warmup_seconds
+    OnFail      = Terminate
+
+  # Step 3 - Acquire voltage samples
+  # Collect sample_count readings at sample_interval_seconds spacing on the
+  # configured output channel. Returns the raw readings in volts.
+  Step "Measure Output Voltage"
+    Action      = Python
+    Module      = src/measure_voltage.py
+    Function    = measure_samples
+    Uses        = supply.channel, measurement.sample_count, measurement.sample_interval_seconds
+    OnFail      = Continue
+
+  # Step 4 - Validate against limits
+  # Compare the mean reading against voltage_setpoint_volts using
+  # tolerance_volts, and confirm every sample sits inside the min/max window.
+  Step "Validate Results"
+    Action      = Python
+    Module      = src/validate_results.py
+    Function    = validate
+    Uses        = supply.voltage_setpoint_volts, measurement.tolerance_volts, limits.voltage_min_volts, limits.voltage_max_volts
+    OnFail      = Continue
+
+  # Step 5 - Ripple check
+  # Derive peak-to-peak ripple from the acquired samples and compare it against
+  # ripple_max_millivolts. Flags noisy or unstable output rails.
+  Step "Check Output Ripple"
+    Action      = Python
+    Module      = src/validate_results.py
+    Function    = check_ripple
+    Uses        = limits.ripple_max_millivolts
+    OnFail      = Continue
+
+  # Step 6 - Write results log
+  # Append a timestamped, human-readable record of the run to
+  # results/power_supply_test.log for traceability.
+  Step "Log Results"
+    Action      = Python
+    Module      = src/validate_results.py
+    Function    = write_log
+    Uses        = logging.results_dir, logging.log_file
+
+  # Step 7 - Safe shutdown
+  # Always return the supply output to 0 V regardless of pass/fail so the DUT
+  # is left in a safe state.
+  Step "Power Down"
+    Action      = Python
+    Module      = src/measure_voltage.py
+    Function    = power_off
+    RunMode     = Cleanup
+
+End Sequence

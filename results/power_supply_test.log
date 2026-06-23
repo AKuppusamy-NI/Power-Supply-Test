@@ -1,0 +1,6 @@
+# Power-Supply-Test - run log (PS-3000 Bench Supply, channel 1)
+# Format: [timestamp] result=PASS|FAIL setpoint mean error tol ripple (limit)
+[2026-06-18T08:14:02] result=PASS setpoint=12.000V mean=11.998V error=-0.002V tol=+/-0.250V ripple=38.0mV (limit 50.0mV)
+[2026-06-19T09:02:47] result=PASS setpoint=12.000V mean=12.012V error=+0.012V tol=+/-0.250V ripple=42.0mV (limit 50.0mV)
+[2026-06-20T14:31:55] result=FAIL setpoint=12.000V mean=12.180V error=+0.180V tol=+/-0.250V ripple=61.0mV (limit 50.0mV)
+[2026-06-22T07:48:19] result=PASS setpoint=12.000V mean=12.004V error=+0.004V tol=+/-0.250V ripple=40.0mV (limit 50.0mV)
