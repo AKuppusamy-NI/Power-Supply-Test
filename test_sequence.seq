@@ -1,0 +1,29 @@
+# Demo TestStand-Style Sequence: Power Supply Output Check
+
+Sequence Name: MainSequence
+Operator: Test Engineer
+
+Step 1: Initialize Power Supply
+  Action: Connect to bench power supply
+  Result: PASS
+
+Step 2: Load Configuration
+  Source: config.json
+  Result: PASS
+
+Step 3: Set Output Voltage
+  Target Voltage: 12.0 V
+  Result: PASS
+
+Step 4: Measure Output Voltage
+  Action: Run measure_voltage.py
+  Measured Value: 12.1 V
+  Result: PASS
+
+Step 5: Log Results
+  Destination: test log
+  Result: PASS
+
+Step 6: Shutdown Power Supply
+  Action: Disable output
+  Result: PASS
