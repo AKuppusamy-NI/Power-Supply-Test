@@ -1,0 +1,53 @@
+# ============================================================
+# Sequence: thermal_test
+# Description: Thermal soak test. Ramps the chamber between
+#              min and max temperatures with a controlled ramp
+#              rate and dwell, checking output thresholds.
+# Format: plain UTF-8 text, one "key = value" setting per line.
+#         Lines starting with # are comments/headers.
+# ============================================================
+
+# --- Sequence metadata ---
+sequence_name = thermal_test
+sequence_version = 1.0
+unit_under_test = PSU-1234
+operator = demo
+
+# --- Global settings ---
+temp_min_c = -20.0
+temp_max_c = 70.0
+ramp_rate_c_per_min = 2.0
+dwell_time_min = 15.0
+default_timeout_s = 60
+
+# --- Step 1: Ramp to cold ---
+step1.name = ramp_cold
+step1.action = set_temperature
+step1.target_c = -20.0
+step1.ramp_rate_c_per_min = 2.0
+
+# --- Step 2: Cold dwell + measure ---
+step2.name = cold_dwell
+step2.action = measure_voltage
+step2.dwell_time_min = 15.0
+step2.threshold_low_v = 11.0
+step2.threshold_high_v = 13.0
+
+# --- Step 3: Ramp to hot ---
+step3.name = ramp_hot
+step3.action = set_temperature
+step3.target_c = 70.0
+step3.ramp_rate_c_per_min = 2.0
+
+# --- Step 4: Hot dwell + measure ---
+step4.name = hot_dwell
+step4.action = measure_voltage
+step4.dwell_time_min = 15.0
+step4.threshold_low_v = 11.0
+step4.threshold_high_v = 13.0
+
+# --- Step 5: Return to ambient ---
+step5.name = ramp_ambient
+step5.action = set_temperature
+step5.target_c = 25.0
+step5.ramp_rate_c_per_min = 2.0

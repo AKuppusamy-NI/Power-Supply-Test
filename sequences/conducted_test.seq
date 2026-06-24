@@ -1,0 +1,51 @@
+# ============================================================
+# Sequence: conducted_test
+# Description: Power-on conducted test for a DC power supply.
+#              Verifies output voltage against limits with
+#              settle delays and result logging.
+# Format: plain UTF-8 text, one "key = value" setting per line.
+#         Lines starting with # are comments/headers.
+# ============================================================
+
+# --- Sequence metadata ---
+sequence_name = conducted_test
+sequence_version = 1.0
+unit_under_test = PSU-1234
+operator = demo
+
+# --- Global settings ---
+log_enabled = true
+log_file = data/sample_results.csv
+settle_time_s = 0.5
+default_timeout_s = 10
+
+# --- Step 1: Power on ---
+step1.name = power_on
+step1.action = set_output
+step1.channel = 1
+step1.voltage_v = 12.0
+step1.delay_s = 1.0
+
+# --- Step 2: Measure output voltage ---
+step2.name = measure_vout
+step2.action = measure_voltage
+step2.channel = 1
+step2.limit_low_v = 11.4
+step2.limit_high_v = 12.6
+step2.delay_s = 0.5
+
+# --- Step 3: Measure under load ---
+step3.name = measure_vout_loaded
+step3.action = measure_voltage
+step3.channel = 1
+step3.load_a = 1.0
+step3.limit_low_v = 11.2
+step3.limit_high_v = 12.6
+step3.delay_s = 0.5
+
+# --- Step 4: Power off ---
+step4.name = power_off
+step4.action = set_output
+step4.channel = 1
+step4.voltage_v = 0.0
+step4.delay_s = 0.5

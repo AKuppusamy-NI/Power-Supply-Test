@@ -1,0 +1,49 @@
+# ============================================================
+# Sequence: rf_acpr_test
+# Description: RF Adjacent Channel Power Ratio (ACPR) test.
+#              Sets frequency and power level, waits for the
+#              measurement timeout, then evaluates ACPR limits.
+# Format: plain UTF-8 text, one "key = value" setting per line.
+#         Lines starting with # are comments/headers.
+# ============================================================
+
+# --- Sequence metadata ---
+sequence_name = rf_acpr_test
+sequence_version = 1.0
+unit_under_test = RF-MOD-5678
+operator = demo
+
+# --- Global settings ---
+measurement = ACPR
+frequency_hz = 2.4e9
+power_level_dbm = 10.0
+timeout_s = 30
+channel_bandwidth_hz = 5e6
+default_timeout_s = 30
+
+# --- Step 1: Configure source ---
+step1.name = configure_source
+step1.action = set_rf_source
+step1.frequency_hz = 2.4e9
+step1.power_level_dbm = 10.0
+
+# --- Step 2: Measure ACPR (lower) ---
+step2.name = measure_acpr_lower
+step2.action = measure_acpr
+step2.measurement = ACPR
+step2.offset_hz = -5e6
+step2.timeout_s = 30
+step2.limit_high_dbc = -45.0
+
+# --- Step 3: Measure ACPR (upper) ---
+step3.name = measure_acpr_upper
+step3.action = measure_acpr
+step3.measurement = ACPR
+step3.offset_hz = 5e6
+step3.timeout_s = 30
+step3.limit_high_dbc = -45.0
+
+# --- Step 4: RF off ---
+step4.name = rf_off
+step4.action = set_rf_source
+step4.power_level_dbm = -100.0

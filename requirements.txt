@@ -1,0 +1,10 @@
+# Python dependencies for the Power-Supply-Test demo.
+#
+# The scripts in scripts/ intentionally use only the Python standard
+# library (argparse, csv, random) so the demo runs anywhere with no
+# installation step. There are no third-party requirements.
+#
+# If you extend the demo (e.g. richer analysis), pandas is a natural
+# addition; uncomment the line below to use it.
+#
+# pandas>=2.0

@@ -1,0 +1,53 @@
+# ============================================================
+# Sequence: power_calibration
+# Description: Calibrates the supply output across several
+#              cal points, recording vcc and current limits
+#              with settle times for each point.
+# Format: plain UTF-8 text, one "key = value" setting per line.
+#         Lines starting with # are comments/headers.
+# ============================================================
+
+# --- Sequence metadata ---
+sequence_name = power_calibration
+sequence_version = 1.0
+unit_under_test = PSU-1234
+operator = demo
+
+# --- Global settings ---
+vcc_nominal_v = 12.0
+current_limit_a = 2.0
+settle_time_s = 1.0
+default_timeout_s = 15
+cal_point_count = 4
+
+# --- Cal point 1 ---
+cal1.name = cal_point_3v
+cal1.set_voltage_v = 3.0
+cal1.current_limit_a = 2.0
+cal1.settle_time_s = 1.0
+cal1.limit_low_v = 2.95
+cal1.limit_high_v = 3.05
+
+# --- Cal point 2 ---
+cal2.name = cal_point_5v
+cal2.set_voltage_v = 5.0
+cal2.current_limit_a = 2.0
+cal2.settle_time_s = 1.0
+cal2.limit_low_v = 4.95
+cal2.limit_high_v = 5.05
+
+# --- Cal point 3 ---
+cal3.name = cal_point_9v
+cal3.set_voltage_v = 9.0
+cal3.current_limit_a = 2.0
+cal3.settle_time_s = 1.0
+cal3.limit_low_v = 8.91
+cal3.limit_high_v = 9.09
+
+# --- Cal point 4 ---
+cal4.name = cal_point_12v
+cal4.set_voltage_v = 12.0
+cal4.current_limit_a = 2.0
+cal4.settle_time_s = 1.5
+cal4.limit_low_v = 11.88
+cal4.limit_high_v = 12.12

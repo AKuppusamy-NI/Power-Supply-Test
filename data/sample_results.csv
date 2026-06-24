@@ -1,0 +1,10 @@
+step,value,limit_low,limit_high,pass
+power_on,12.04,11.4,12.6,true
+measure_vout,12.01,11.4,12.6,true
+measure_vout_loaded,11.83,11.2,12.6,true
+cal_point_3v,3.02,2.95,3.05,true
+cal_point_5v,4.97,4.95,5.05,true
+cal_point_9v,9.14,8.91,9.09,false
+cal_point_12v,11.99,11.88,12.12,true
+cold_dwell,11.62,11.0,13.0,true
+hot_dwell,12.71,11.0,13.0,true
