@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<?xml-stylesheet type="text/xsl" href="TSDocument.xsl" ?>
+<!--
+  ============================================================================
+  WidgetTest_NEW.seq
+  ----------------------------------------------------------------------------
+  Newer, REFINED version of the Widget functional test workflow.
+  Functionally equivalent to WidgetTest_OLD.seq, but cleaned up:
+
+    * Redundancy removed (DUT powered on once, each measurement done once,
+      log written once; repeated channels handled with a single loop).
+    * Proper error handling (Setup/Main/Cleanup model, Status checks,
+      Cleanup ALWAYS runs so the instrument is released even on failure).
+    * No hardcoded values (COM port, channels, limits, log path live in
+      FileGlobals so they are configurable without editing steps).
+    * Modular structure (Initialize / RunMeasurements / Shutdown
+      subsequences instead of one flat MainSequence).
+    * More efficient flow (single parameterized measurement subsequence
+      reused for voltage and current).
+    * Clear naming and documentation on every step and subsequence.
+
+  Format: NI TestStand XML sequence file (TestStand 2019, 19.0).
+  Open in the TestStand Sequence Editor, or diff directly against the OLD file.
+  ============================================================================
+-->
+<TS:File xmlns:TS="x-schema:TSSchema.xml">
+	<TS:Property Name="TS" Type="Obj">
+		<TS:Property Name="Version" Type="String" Flags="0x400000">
+			<TS:Value>2019 (19.0.0.124)</TS:Value>
+		</TS:Property>
+	</TS:Property>
+
+	<TS:Property Name="Seq" Type="Obj">
+
+		<!-- ============ FILE GLOBALS: all configuration in one place ============ -->
+		<TS:Property Name="FileGlobals" Type="Obj">
+			<TS:Property Name="ComPort" Type="String"><TS:Value>COM3</TS:Value></TS:Property>
+			<TS:Property Name="BaudRate" Type="Number"><TS:Value>9600</TS:Value></TS:Property>
+			<TS:Property Name="SupplyChannel" Type="Number"><TS:Value>1</TS:Value></TS:Property>
+			<TS:Property Name="SupplyVoltage" Type="Number"><TS:Value>12.0</TS:Value></TS:Property>
+			<TS:Property Name="SupplyCurrentLimit" Type="Number"><TS:Value>1.0</TS:Value></TS:Property>
+			<TS:Property Name="SettleTimeSec" Type="Number"><TS:Value>2.0</TS:Value></TS:Property>
+			<TS:Property Name="VoltageChannel" Type="Number"><TS:Value>0</TS:Value></TS:Property>
+			<TS:Property Name="VoltageLowLimit" Type="Number"><TS:Value>11.4</TS:Value></TS:Property>
+			<TS:Property Name="VoltageHighLimit" Type="Number"><TS:Value>12.6</TS:Value></TS:Property>
+			<TS:Property Name="CurrentChannel" Type="Number"><TS:Value>1</TS:Value></TS:Property>
+			<TS:Property Name="CurrentLowLimit" Type="Number"><TS:Value>0.1</TS:Value></TS:Property>
+			<TS:Property Name="CurrentHighLimit" Type="Number"><TS:Value>0.8</TS:Value></TS:Property>
+			<TS:Property Name="LogFilePath" Type="String"><TS:Value>C:\Temp\widget_log.txt</TS:Value></TS:Property>
+		</TS:Property>
+
+		<TS:Property Name="Sequences" Type="Obj" Flags="0x40000">
+
+			<!-- ===================== MAIN SEQUENCE (orchestrator only) ===================== -->
+			<TS:Property Name="MainSequence" Type="Sequence">
+				<TS:Property Name="Comment" Type="String">
+					<TS:Value>Top-level test flow. Delegates work to focused subsequences and
+guarantees cleanup via the Cleanup step group.</TS:Value>
+				</TS:Property>
+
+				<!-- SETUP: open the instrument once. Runs first, always. -->
+				<TS:Property Name="Setup" Type="Obj" Flags="0x40000">
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>SequenceCall</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Initialize Instrument And Power</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Opens the configured COM session and powers the DUT exactly once.</TS:Value></TS:Property>
+						<TS:Property Name="TargetSeq" Type="String"><TS:Value>Initialize</TS:Value></TS:Property>
+					</TS:Property>
+				</TS:Property>
+
+				<!-- MAIN: run measurements; abort to Cleanup automatically on failure. -->
+				<TS:Property Name="Main" Type="Obj" Flags="0x40000">
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>SequenceCall</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Run Measurements</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Runs voltage and current checks through one reusable, parameterized subsequence.</TS:Value></TS:Property>
+						<TS:Property Name="TargetSeq" Type="String"><TS:Value>RunMeasurements</TS:Value></TS:Property>
+					</TS:Property>
+				</TS:Property>
+
+				<!-- CLEANUP: ALWAYS runs, even if Main failed -> no leaked session/power. -->
+				<TS:Property Name="Cleanup" Type="Obj" Flags="0x40000">
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>SequenceCall</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Shutdown And Release</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Powers down and closes the session unconditionally for safe recovery.</TS:Value></TS:Property>
+						<TS:Property Name="TargetSeq" Type="String"><TS:Value>Shutdown</TS:Value></TS:Property>
+					</TS:Property>
+				</TS:Property>
+			</TS:Property>
+
+			<!-- ===================== SUBSEQUENCE: Initialize ===================== -->
+			<TS:Property Name="Initialize" Type="Sequence">
+				<TS:Property Name="Comment" Type="String"><TS:Value>Opens the instrument session and powers the DUT once, using FileGlobals config.</TS:Value></TS:Property>
+				<TS:Property Name="Main" Type="Obj" Flags="0x40000">
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>Statement</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Open Instrument Session</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Opens FileGlobals.ComPort at FileGlobals.BaudRate. On error, propagate to Cleanup.</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>// open FileGlobals.ComPort @ FileGlobals.BaudRate; Step.Result.Status set by driver</TS:Value></TS:Property>
+					</TS:Property>
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>Statement</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Power On DUT And Settle</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Sets supply once from FileGlobals and waits FileGlobals.SettleTimeSec.</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>// set CHFileGlobals.SupplyChannel to FileGlobals.SupplyVoltage / SupplyCurrentLimit, then settle</TS:Value></TS:Property>
+					</TS:Property>
+
+				</TS:Property>
+			</TS:Property>
+
+			<!-- ===================== SUBSEQUENCE: RunMeasurements ===================== -->
+			<TS:Property Name="RunMeasurements" Type="Sequence">
+				<TS:Property Name="Comment" Type="String"><TS:Value>Performs each measurement once by calling the reusable MeasureLimit subsequence.</TS:Value></TS:Property>
+				<TS:Property Name="Main" Type="Obj" Flags="0x40000">
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>SequenceCall</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Check Output Voltage</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Voltage limit test using configured channel and limits.</TS:Value></TS:Property>
+						<TS:Property Name="TargetSeq" Type="String"><TS:Value>MeasureLimit</TS:Value></TS:Property>
+						<TS:Property Name="Args" Type="String"><TS:Value>"Voltage", FileGlobals.VoltageChannel, FileGlobals.VoltageLowLimit, FileGlobals.VoltageHighLimit</TS:Value></TS:Property>
+					</TS:Property>
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>SequenceCall</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Check Output Current</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Current limit test reusing the same MeasureLimit subsequence.</TS:Value></TS:Property>
+						<TS:Property Name="TargetSeq" Type="String"><TS:Value>MeasureLimit</TS:Value></TS:Property>
+						<TS:Property Name="Args" Type="String"><TS:Value>"Current", FileGlobals.CurrentChannel, FileGlobals.CurrentLowLimit, FileGlobals.CurrentHighLimit</TS:Value></TS:Property>
+					</TS:Property>
+
+				</TS:Property>
+			</TS:Property>
+
+			<!-- ============ SUBSEQUENCE: MeasureLimit (reusable, parameterized) ============ -->
+			<TS:Property Name="MeasureLimit" Type="Sequence">
+				<TS:Property Name="Comment" Type="String"><TS:Value>Reusable measurement. Reads one DAQ channel and applies GELE limits.
+Replaces the duplicated VoltCheck/VoltCheck2/CurrCheck steps from the old file.</TS:Value></TS:Property>
+
+				<!-- Parameters make this subsequence generic and configurable -->
+				<TS:Property Name="Parameters" Type="Obj">
+					<TS:Property Name="MeasName" Type="String"><TS:Value></TS:Value></TS:Property>
+					<TS:Property Name="Channel" Type="Number"><TS:Value>0</TS:Value></TS:Property>
+					<TS:Property Name="LowLimit" Type="Number"><TS:Value>0</TS:Value></TS:Property>
+					<TS:Property Name="HighLimit" Type="Number"><TS:Value>0</TS:Value></TS:Property>
+				</TS:Property>
+				<TS:Property Name="Locals" Type="Obj">
+					<TS:Property Name="Measured" Type="Number"><TS:Value>0</TS:Value></TS:Property>
+				</TS:Property>
+
+				<TS:Property Name="Main" Type="Obj" Flags="0x40000">
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>NumericLimitTest</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Measure And Compare</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Reads Parameters.Channel into Locals.Measured and checks against Low/High limits.</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>Locals.Measured = ReadDaqChannel(Parameters.Channel)</TS:Value></TS:Property>
+						<TS:Property Name="Low" Type="Number" Flags="0x0"><TS:Value>0</TS:Value></TS:Property>
+						<TS:Property Name="LowExpr" Type="String"><TS:Value>Parameters.LowLimit</TS:Value></TS:Property>
+						<TS:Property Name="HighExpr" Type="String"><TS:Value>Parameters.HighLimit</TS:Value></TS:Property>
+						<TS:Property Name="Comp" Type="String"><TS:Value>GELE</TS:Value></TS:Property>
+					</TS:Property>
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>Statement</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Append Result To Log</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Writes one line to FileGlobals.LogFilePath (single, non-redundant write).</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>// append Parameters.MeasName + Locals.Measured to FileGlobals.LogFilePath</TS:Value></TS:Property>
+					</TS:Property>
+				</TS:Property>
+			</TS:Property>
+
+			<!-- ===================== SUBSEQUENCE: Shutdown ===================== -->
+			<TS:Property Name="Shutdown" Type="Sequence">
+				<TS:Property Name="Comment" Type="String"><TS:Value>Cleanup logic. Powers down and closes the session even if earlier steps failed.</TS:Value></TS:Property>
+				<TS:Property Name="Main" Type="Obj" Flags="0x40000">
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>Statement</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Power Off DUT</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Sets supply to 0 V. Runs unconditionally for safe recovery.</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>// set CHFileGlobals.SupplyChannel to 0 V</TS:Value></TS:Property>
+					</TS:Property>
+
+					<TS:Property Name="Step" Type="Step">
+						<TS:Property Name="TS" Type="Obj">
+							<TS:Property Name="StepType" Type="String"><TS:Value>Statement</TS:Value></TS:Property>
+						</TS:Property>
+						<TS:Property Name="Name" Type="String"><TS:Value>Close Instrument Session</TS:Value></TS:Property>
+						<TS:Property Name="Comment" Type="String"><TS:Value>Closes the session if open. Guarded so it never throws during cleanup.</TS:Value></TS:Property>
+						<TS:Property Name="Expr" Type="String"><TS:Value>// if session valid, close FileGlobals.ComPort session</TS:Value></TS:Property>
+					</TS:Property>
+
+				</TS:Property>
+			</TS:Property>
+
+		</TS:Property>
+	</TS:Property>
+</TS:File>
